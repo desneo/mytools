@@ -64,9 +64,9 @@
           <section class="card preview-card" aria-labelledby="preview-title">
             <div class="preview-heading"><h2 id="preview-title">目标像素图</h2><button type="button" id="download-png" class="download-button" disabled>下载 PNG <span aria-hidden="true">↓</span></button></div>
             <p class="image-resolution">图像原始分辨率 <span id="frame-resolution">1920 × 1080 px</span></p>
-            <div class="preview-stage" id="preview-stage"><canvas id="field-preview" width="1" height="1" role="img" aria-label="目标在相机画面中的像素投影">你的浏览器不支持 Canvas，请使用现代浏览器查看或下载目标像素图。</canvas><p id="image-unavailable" class="image-unavailable" hidden></p></div>
+            <div class="preview-stage" id="preview-stage"><button type="button" id="open-image" class="preview-trigger" aria-label="放大查看目标像素图" aria-haspopup="dialog" disabled><canvas id="field-preview" width="1" height="1" role="img" aria-label="目标在相机画面中的像素投影">你的浏览器不支持 Canvas，请使用现代浏览器查看或下载目标像素图。</canvas></button><p id="image-unavailable" class="image-unavailable" hidden></p></div>
             <div class="preview-legend"><span><i aria-hidden="true"></i> 目标投影</span><span id="linear-percent">宽 —% · 高 —%</span></div>
-            <p class="field-hint preview-note">屏幕预览按比例缩放；PNG 与输入分辨率一致，仅含背景和居中目标。亚像素边缘可能产生抗锯齿。</p>
+            <p class="field-hint preview-note">点击图片可放大查看，支持原始尺寸。PNG 与输入分辨率一致，仅含背景和居中目标。亚像素边缘可能产生抗锯齿。</p>
             <p id="image-status" class="image-status" role="status" aria-live="polite" hidden></p>
           </section>
 
@@ -78,6 +78,11 @@
 
     <details class="explanation"><summary>计算原理与适用条件 <span aria-hidden="true">＋</span></summary><div class="explanation-body"><div><h3>普通透视投影模型</h3><p>水平像素数 <code>pₓ = Nₓ × Lₓ / [2D × tan(HFOV / 2)]</code>，垂直方向同理。N 为对应方向分辨率，L 为目标物理尺寸，D 为目标距离。对角或垂直视场角会结合图像宽高比换算为水平和垂直视场角。</p><p>像素面积是投影宽高的乘积，允许小数；结果代表连续几何投影，并非实际点亮像素的整数计数。</p></div><div><h3>使用假设</h3><p>采用 rectilinear 普通透视镜头和方形像素；目标居中，目标平面与像面平行，宽高与画面方向对齐。目标尺寸与距离使用统一物理单位计算。双 FOV 输入用于校验方形像素一致性，通过后以水平 FOV 为准计算；不允许通过横纵方向异向拉伸来匹配不一致的角度。</p><p>不适用于鱼眼镜头、明显畸变或倾斜目标。实际成像还受镜头、对焦、采样和噪声影响，几何像素数不等于识别能力。</p></div></div></details>
   </main>
+  <dialog id="image-viewer" class="image-viewer" aria-labelledby="image-viewer-title" aria-describedby="image-viewer-hint">
+    <header class="viewer-header"><div><h2 id="image-viewer-title">目标像素图</h2><p id="viewer-resolution"></p></div><div class="viewer-actions"><button type="button" id="viewer-fit" aria-pressed="true">适应窗口</button><button type="button" id="viewer-original" aria-pressed="false">原始尺寸 1:1</button><button type="button" id="viewer-close" aria-label="关闭图片查看器" autofocus>关闭 ×</button></div></header>
+    <div id="viewer-viewport" class="viewer-viewport"></div>
+    <p id="image-viewer-hint" class="viewer-hint">可切换原始尺寸并滚动查看；点击遮罩或按 Esc 关闭。</p>
+  </dialog>
   <footer class="site-footer wrap"><span>MyTools <span class="footer-separator">/</span> 目标像素计算器</span><span>纯本地计算 · 无需上传数据</span></footer>
 </body>
 </html>

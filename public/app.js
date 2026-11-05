@@ -46,10 +46,13 @@ function releaseDownloadUrls() {
 }
 
 function clearImage() {
+  closeImageViewer();
   imageGeneration += 1;
   imageReady = false;
   releaseDownloadUrls();
   $('download-png').disabled = true;
+  $('open-image').disabled = true;
+  $('open-image').hidden = true;
   $('download-png').removeAttribute('aria-busy');
   $('field-preview').hidden = true;
   $('field-preview').width = 1;
@@ -65,6 +68,7 @@ function imageUnavailable(message) {
 }
 
 function drawPreview(result, width, height) {
+  closeImageViewer();
   imageGeneration += 1;
   imageReady = false;
   releaseDownloadUrls();
@@ -100,6 +104,8 @@ function drawPreview(result, width, height) {
     $('image-unavailable').hidden = true;
     imageReady = true;
     $('download-png').disabled = false;
+    $('open-image').disabled = false;
+    $('open-image').hidden = false;
   } catch (error) {
     imageUnavailable(`${error instanceof Error ? error.message : '图片生成失败。'}请降低分辨率后重试；数值结果不受影响。`);
   }
@@ -271,6 +277,51 @@ $('use-vertical-fov').addEventListener('click', () => {
   calculate();
 });
 
+function restorePreviewImage() {
+  $('open-image').append($('field-preview'));
+  document.body.classList.remove('viewer-open');
+}
+
+function closeImageViewer() {
+  if ($('image-viewer').open) $('image-viewer').close();
+  restorePreviewImage();
+}
+
+function setViewerScale(original) {
+  const viewport = $('viewer-viewport');
+  viewport.classList.toggle('original-size', original);
+  $('viewer-fit').setAttribute('aria-pressed', String(!original));
+  $('viewer-original').setAttribute('aria-pressed', String(original));
+  // 原始尺寸从画面中央开始查看，便于找到居中的目标。
+  viewport.scrollLeft = original ? (viewport.scrollWidth - viewport.clientWidth) / 2 : 0;
+  viewport.scrollTop = original ? (viewport.scrollHeight - viewport.clientHeight) / 2 : 0;
+}
+
+$('open-image').addEventListener('click', () => {
+  if (!imageReady) return;
+  const canvas = $('field-preview');
+  setText('viewer-resolution', `${format(canvas.width, 0)} × ${format(canvas.height, 0)} px`);
+  // 复用当前 Canvas，避免放大时复制高分辨率图片、额外占用内存。
+  $('viewer-viewport').append(canvas);
+  document.body.classList.add('viewer-open');
+  $('image-viewer').showModal();
+  setViewerScale(false);
+});
+$('viewer-fit').addEventListener('click', () => setViewerScale(false));
+$('viewer-original').addEventListener('click', () => setViewerScale(true));
+$('viewer-close').addEventListener('click', closeImageViewer);
+$('image-viewer').addEventListener('close', () => {
+  restorePreviewImage();
+  if (imageReady) $('open-image').focus({ preventScroll: true });
+});
+$('image-viewer').addEventListener('click', (event) => {
+  if (event.target !== $('image-viewer')) return;
+  const rect = $('image-viewer').getBoundingClientRect();
+  if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) {
+    closeImageViewer();
+  }
+});
+
 $('download-png').addEventListener('click', () => {
   if (!imageReady) return;
   const generation = imageGeneration;
@@ -319,6 +370,7 @@ $('download-png').addEventListener('click', () => {
   }
 });
 window.addEventListener('pagehide', () => {
+  closeImageViewer();
   imageGeneration += 1;
   releaseDownloadUrls();
 });
