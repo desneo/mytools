@@ -101,3 +101,32 @@ test('非法输入给出错误，防止 NaN、Infinity 和退化视场', () => {
   ];
   for (const patch of cases) assert.throws(() => calculateProjection({ ...base, ...patch }), Error);
 });
+
+test('双 FOV 匹配时与单水平 FOV 相同，保留方形像素', () => {
+  const expected = calculateProjection(base);
+  const r = calculateProjection({ ...base, fovAxis: 'both', hfovDeg: 60, vfovDeg: expected.vfovDeg });
+  close(r.pixelsX, expected.pixelsX);
+  close(r.pixelsY, expected.pixelsY);
+  close(r.gsdXM, r.gsdYM);
+});
+
+test('双 FOV 不匹配会阻止计算并提供两个方向的修正值', () => {
+  let mismatch;
+  try { calculateProjection({ ...base, fovAxis: 'both', hfovDeg: 90, vfovDeg: 90 }); }
+  catch (error) { mismatch = error; }
+  assert.equal(mismatch?.code, 'FOV_MISMATCH');
+  close(mismatch.correctedVFOVDeg, 58.71550708558255);
+  close(mismatch.correctedHFOVDeg, 121.28449291441746);
+  const horizontal = calculateProjection({ ...base, fovAxis: 'both', hfovDeg: 90, vfovDeg: mismatch.correctedVFOVDeg });
+  const vertical = calculateProjection({ ...base, fovAxis: 'both', hfovDeg: mismatch.correctedHFOVDeg, vfovDeg: 90 });
+  close(horizontal.gsdXM, horizontal.gsdYM);
+  close(vertical.gsdXM, vertical.gsdYM);
+});
+
+test('双 FOV 容忍角度舍入但拒绝明显误差', () => {
+  const r = calculateProjection({ ...base, fovAxis: 'both', hfovDeg: 60, vfovDeg: 35.98 });
+  close(r.hfovDeg, 60);
+  close(r.gsdXM, r.gsdYM);
+  assert.throws(() => calculateProjection({ ...base, fovAxis: 'both', hfovDeg: 60, vfovDeg: 40 }), { code: 'FOV_MISMATCH' });
+  assert.throws(() => calculateProjection({ ...base, fovAxis: 'both', hfovDeg: 60, vfovDeg: 180 }), Error);
+});

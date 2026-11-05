@@ -29,9 +29,10 @@
         <form id="calculator-form" novalidate>
           <fieldset>
             <legend><span class="step">01</span> 相机参数</legend>
-            <div class="field-row fov-row">
-              <div class="field"><label for="fov-axis">视场角方向</label><select id="fov-axis" name="fovAxis"><option value="horizontal">水平 HFOV</option><option value="vertical">垂直 VFOV</option><option value="diagonal">对角 DFOV</option></select></div>
-              <div class="field"><label for="fov">视场角</label><div class="input-unit"><input id="fov" name="fov" type="number" value="60" min="0" max="180" step="any" inputmode="decimal" aria-describedby="fov-hint" required><span>°</span></div></div>
+            <div class="field-row fov-row" id="fov-row">
+              <div class="field"><label for="fov-axis">视场角输入</label><select id="fov-axis" name="fovAxis"><option value="horizontal">水平 HFOV</option><option value="vertical">垂直 VFOV</option><option value="diagonal">对角 DFOV</option><option value="both">水平 + 垂直 FOV</option></select></div>
+              <div class="field"><label for="fov" id="fov-label">视场角</label><div class="input-unit"><input id="fov" name="fov" type="number" value="60" min="0" max="180" step="any" inputmode="decimal" aria-describedby="fov-hint" required><span>°</span></div></div>
+              <div class="field" id="vertical-fov-field" hidden><label for="vertical-fov">垂直 VFOV</label><div class="input-unit"><input id="vertical-fov" type="number" value="35.98339777135764" min="0" max="180" step="any" inputmode="decimal" aria-describedby="fov-hint"><span>°</span></div></div>
             </div>
             <p class="field-hint" id="fov-hint">使用所选方向的完整视场角，范围 0°–180°（不含端点）。</p>
             <div class="field preset-field"><label for="resolution-preset">图像分辨率</label><select id="resolution-preset"><option value="1920x1080">1920 × 1080 · Full HD</option><option value="3840x2160">3840 × 2160 · 4K UHD</option><option value="2560x1440">2560 × 1440 · QHD</option><option value="1280x720">1280 × 720 · HD</option><option value="640x512">640 × 512 · 热成像</option><option value="640x480">640 × 480 · VGA</option><option value="custom">自定义分辨率</option></select></div>
@@ -50,7 +51,7 @@
       </section>
 
       <section class="results-column" aria-labelledby="results-title">
-        <div id="error-message" class="error-message" role="alert" hidden></div>
+        <div id="error-message" class="error-message" role="alert" hidden><p id="error-text"></p><div id="fov-corrections" class="fov-corrections" hidden><button id="use-horizontal-fov" type="button">以水平 FOV 为准</button><button id="use-vertical-fov" type="button">以垂直 FOV 为准</button></div></div>
         <div id="results" class="results-content">
           <section class="card result-card">
             <div class="card-heading"><div><p class="eyebrow">PROJECTION</p><h2 id="results-title">目标像素投影</h2></div><span class="live-badge"><span class="status-dot"></span> 实时计算</span></div>
@@ -61,10 +62,12 @@
           </section>
 
           <section class="card preview-card" aria-labelledby="preview-title">
-            <div class="preview-heading"><h2 id="preview-title">视野示意</h2><span id="frame-resolution">1920 × 1080 px</span></div>
-            <div class="preview-stage" id="preview-stage"><svg id="field-preview" viewBox="0 0 1920 1080" role="img" aria-labelledby="preview-svg-title preview-svg-desc"><title id="preview-svg-title">目标在相机画面中的投影</title><desc id="preview-svg-desc">矩形代表相机画面，青绿色区域代表居中的目标。</desc><defs><pattern id="frame-grid" width="120" height="120" patternUnits="userSpaceOnUse"><path d="M 120 0 L 0 0 0 120" fill="none" stroke="#d4e0dc" stroke-width="1"/></pattern><clipPath id="frame-clip"><rect id="clip-rect" width="1920" height="1080"/></clipPath></defs><rect id="frame-background" width="1920" height="1080" fill="#edf3f0"/><rect id="grid-rect" width="1920" height="1080" fill="url(#frame-grid)"/><g clip-path="url(#frame-clip)"><rect id="target-projection" x="950" y="530" width="20" height="20" fill="#0c8c78" fill-opacity="0.28" stroke="#087765" stroke-width="1.5" vector-effect="non-scaling-stroke"/><path id="crosshair" d="M 950 540 H 970 M 960 530 V 550" stroke="#087765" stroke-width="1" vector-effect="non-scaling-stroke" opacity="0.65"/></g></svg></div>
+            <div class="preview-heading"><h2 id="preview-title">目标像素图</h2><button type="button" id="download-png" class="download-button" disabled>下载 PNG <span aria-hidden="true">↓</span></button></div>
+            <p class="image-resolution">图像原始分辨率 <span id="frame-resolution">1920 × 1080 px</span></p>
+            <div class="preview-stage" id="preview-stage"><canvas id="field-preview" width="1" height="1" role="img" aria-label="目标在相机画面中的像素投影">你的浏览器不支持 Canvas，请使用现代浏览器查看或下载目标像素图。</canvas><p id="image-unavailable" class="image-unavailable" hidden></p></div>
             <div class="preview-legend"><span><i aria-hidden="true"></i> 目标投影</span><span id="linear-percent">宽 —% · 高 —%</span></div>
-            <p class="field-hint preview-note">示意图按图像比例缩放，目标保持居中；不逐个渲染传感器像素。</p>
+            <p class="field-hint preview-note">屏幕预览按比例缩放；PNG 与输入分辨率一致，仅含背景和居中目标。亚像素边缘可能产生抗锯齿。</p>
+            <p id="image-status" class="image-status" role="status" aria-live="polite" hidden></p>
           </section>
 
           <section class="card detail-card" aria-labelledby="details-title"><h2 id="details-title">几何参数</h2><dl class="detail-grid"><div><dt>视野覆盖 · 宽 × 高</dt><dd id="scene-size">—</dd></div><div><dt>单像素覆盖 · 水平 / 垂直</dt><dd id="gsd">—</dd></div><div><dt>水平 / 垂直视场角</dt><dd id="axis-fovs">—</dd></div><div><dt>对角视场角</dt><dd id="diagonal-fov">—</dd></div></dl></section>
@@ -73,7 +76,7 @@
       </section>
     </div>
 
-    <details class="explanation"><summary>计算原理与适用条件 <span aria-hidden="true">＋</span></summary><div class="explanation-body"><div><h3>普通透视投影模型</h3><p>水平像素数 <code>pₓ = Nₓ × Lₓ / [2D × tan(HFOV / 2)]</code>，垂直方向同理。N 为对应方向分辨率，L 为目标物理尺寸，D 为目标距离。对角或垂直视场角会结合图像宽高比换算为水平和垂直视场角。</p><p>像素面积是投影宽高的乘积，允许小数；结果代表连续几何投影，并非实际点亮像素的整数计数。</p></div><div><h3>使用假设</h3><p>采用 rectilinear 普通透视镜头和方形像素；目标居中，目标平面与像面平行，宽高与画面方向对齐。目标尺寸与距离使用统一物理单位计算。</p><p>不适用于鱼眼镜头、明显畸变或倾斜目标。实际成像还受镜头、对焦、采样和噪声影响，几何像素数不等于识别能力。</p></div></div></details>
+    <details class="explanation"><summary>计算原理与适用条件 <span aria-hidden="true">＋</span></summary><div class="explanation-body"><div><h3>普通透视投影模型</h3><p>水平像素数 <code>pₓ = Nₓ × Lₓ / [2D × tan(HFOV / 2)]</code>，垂直方向同理。N 为对应方向分辨率，L 为目标物理尺寸，D 为目标距离。对角或垂直视场角会结合图像宽高比换算为水平和垂直视场角。</p><p>像素面积是投影宽高的乘积，允许小数；结果代表连续几何投影，并非实际点亮像素的整数计数。</p></div><div><h3>使用假设</h3><p>采用 rectilinear 普通透视镜头和方形像素；目标居中，目标平面与像面平行，宽高与画面方向对齐。目标尺寸与距离使用统一物理单位计算。双 FOV 输入用于校验方形像素一致性，通过后以水平 FOV 为准计算；不允许通过横纵方向异向拉伸来匹配不一致的角度。</p><p>不适用于鱼眼镜头、明显畸变或倾斜目标。实际成像还受镜头、对焦、采样和噪声影响，几何像素数不等于识别能力。</p></div></div></details>
   </main>
   <footer class="site-footer wrap"><span>MyTools <span class="footer-separator">/</span> 目标像素计算器</span><span>纯本地计算 · 无需上传数据</span></footer>
 </body>
